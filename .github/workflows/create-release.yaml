@@ -38,7 +38,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 #        run: "./scripts/create_changelog.sh ${{ github.event.inputs.name }}"
-        run: "./scripts/create_changelog.sh 0.1.2 0.0.0"
+        run: "./scripts/create_changelog.sh 0.2.4 0.2.3"
 
       - name: Create github release
         id: create_release
