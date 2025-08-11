@@ -19,7 +19,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: bd31875df9c0d8e2e39cf78f02fdd06e019f20a45b5e2e4a85aff86744a9e8eb
+        checksum/config: 1a03575d7b090eb5b98d341190202f488946677707f9d56badbcccc5e2abd9f3
         sidecar.istio.io/inject: "false"
       labels:
         control-plane: controller-manager
@@ -52,7 +52,7 @@ spec:
             - secretRef:
                 name: sap-btp-operator-clusterid
                 optional: true
-          image: "europe-docker.pkg.dev/kyma-project/prod/external/ghcr.io/sap/sap-btp-service-operator/controller:v0.7.9"
+          image: "europe-docker.pkg.dev/kyma-project/prod/external/ghcr.io/sap/sap-btp-service-operator/controller:v0.8.0"
           imagePullPolicy: IfNotPresent
           name: manager
           ports:
