@@ -513,6 +513,9 @@ func (r *BtpOperatorReconciler) deleteResources(ctx context.Context, us []*unstr
 	return nil
 }
 
+type ResourcePointer *unstructured.Unstructured
+type ResourceCollection []ResourcePointer
+
 func (r *BtpOperatorReconciler) reconcileResources(ctx context.Context, cr *v1alpha1.BtpOperator, s *corev1.Secret) error {
 	logger := log.FromContext(ctx)
 
