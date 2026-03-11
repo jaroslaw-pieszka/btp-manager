@@ -453,6 +453,7 @@ func (r *BtpOperatorReconciler) deleteOutdatedResources(ctx context.Context) err
 	return nil
 }
 
+// TODO not tested
 func (r *BtpOperatorReconciler) createUnstructuredObjectsFromManifestsDir(manifestsDir string) ([]*unstructured.Unstructured, error) {
 	objs, err := r.manifestHandler.CollectObjectsFromDir(manifestsDir)
 	if err != nil {
@@ -615,6 +616,7 @@ func (r *BtpOperatorReconciler) prepareModuleResourcesFromManifests(ctx context.
 		}
 	}
 
+	// TODO check ymlutils if is supported
 	chartVer, err := ymlutils.ExtractStringValueFromYamlForGivenKey(fmt.Sprintf("%s/Chart.yaml", config.ChartPath), "version")
 	if err != nil {
 		logger.Error(err, "while getting module chart version")
