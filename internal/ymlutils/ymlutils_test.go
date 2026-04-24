@@ -72,6 +72,14 @@ func TestExtractGvkFromYml_MultiDoc(t *testing.T) {
 	if len(gvks) != 2 {
 		t.Fatalf("expected 2 gvks, got %d: %v", len(gvks), gvks)
 	}
+	want0 := schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
+	want1 := schema.GroupVersionKind{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}
+	if gvks[0] != want0 {
+		t.Errorf("gvks[0] got %v, want %v", gvks[0], want0)
+	}
+	if gvks[1] != want1 {
+		t.Errorf("gvks[1] got %v, want %v", gvks[1], want1)
+	}
 }
 
 func TestExtractGvkFromYml_Deduplication(t *testing.T) {
@@ -198,6 +206,10 @@ func TestAddSuffixToNameInContent_SpecGroup(t *testing.T) {
 	spec := parsed["spec"].(map[string]interface{})
 	if spec["group"] != "services.cloud.sap.com-updated" {
 		t.Errorf("spec.group got %q, want %q", spec["group"], "services.cloud.sap.com-updated")
+	}
+	meta := parsed["metadata"].(map[string]interface{})
+	if meta["name"] != "servicebindings.services.cloud.sap.com-updated" {
+		t.Errorf("metadata.name got %q, want %q", meta["name"], "servicebindings.services.cloud.sap.com-updated")
 	}
 }
 
