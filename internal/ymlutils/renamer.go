@@ -1,9 +1,9 @@
 package ymlutils
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -19,7 +19,7 @@ func AddSuffixToNameInManifests(manifestsDir, suffix string) error {
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".yml") {
 			return nil
 		}
-		fullPath := manifestsDir + string(os.PathSeparator) + path
+		fullPath := filepath.Join(manifestsDir, path)
 		data, err := os.ReadFile(fullPath)
 		if err != nil {
 			return err
@@ -59,7 +59,7 @@ func addSuffixToNameInContent(data []byte, suffix string) ([]byte, error) {
 
 // UpdateChartVersion sets the version field in Chart.yaml at chartPath/Chart.yaml.
 func UpdateChartVersion(chartPath, newVersion string) error {
-	filename := fmt.Sprintf("%s/Chart.yaml", chartPath)
+	filename := filepath.Join(chartPath, "Chart.yaml")
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func UpdateChartVersion(chartPath, newVersion string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filename, updated, 0700)
+	return os.WriteFile(filename, updated, 0644)
 }
 
 func updateChartVersionInContent(data []byte, newVersion string) ([]byte, error) {
