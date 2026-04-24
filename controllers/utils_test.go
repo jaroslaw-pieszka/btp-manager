@@ -615,7 +615,7 @@ func checkIfNoBindingSecretExists() {
 }
 
 func checkIfNoBtpResourceExists() {
-	gvks, err := ymlutils.GatherChartGvks(config.ChartPath)
+	gvks, err := ymlutils.GatherChartGvks(os.DirFS(config.ChartPath))
 	Expect(err).To(BeNil())
 
 	found := false

@@ -95,11 +95,56 @@ var _ = Describe("BTP Operator controller - updating", func() {
 		It("new resources (with new names) should be created and old ones removed", func() {
 			Eventually(actualWorkqueueSize).WithTimeout(time.Second * 5).WithPolling(time.Millisecond * 100).Should(Equal(0))
 
-			err := ymlutils.CopyManifestsFromYamlsIntoOneYaml(getApplyPath(), getToDeleteYamlPath())
+			err := ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getApplyPath()), getToDeleteYamlPath())
 			Expect(err).To(BeNil())
 
-			err = ymlutils.AddSuffixToNameInManifests(getApplyPath(), suffix,
-				sapBtpServiceOperatorConfigMapName, sapBtpServiceOperatorSecretName, config.DeploymentName)
+			err = ymlutils.AddSuffixToNameInManifests(getApplyPath(), suffix)
+			Expect(err).To(BeNil())
+
+			config.DeploymentName = config.DeploymentName + suffix
+
+			err = ymlutils.UpdateChartVersion(chartUpdatePathForProcess, newChartVersion)
+			Expect(err).To(BeNil())
+
+			_, err = reconciler.Reconcile(ctx, controllerruntime.Request{NamespacedName: apimachienerytypes.NamespacedName{
+				Namespace: cr.Namespace,
+				Name:      cr.Name,
+			}})
+			Expect(err).To(BeNil())
+
+			Eventually(func() int {
+				actualNumOfOldResources, err := countResourcesForGivenChartVer(gvks, initChartVersion)
+				Expect(err).To(BeNil())
+				return actualNumOfOldResources
+			}).WithTimeout(time.Second * 5).WithPolling(time.Millisecond * 100).Should(Equal(0))
+			Eventually(func() int {
+				actualNumOfNewResources, err := countResourcesForGivenChartVer(gvks, newChartVersion)
+				Expect(err).To(BeNil())
+				return actualNumOfNewResources
+			}).WithTimeout(time.Second * 5).WithPolling(time.Millisecond * 100).Should(Equal(initResourcesNum))
+		})
+	})
+
+	When("update some resources names and bump chart version", Label("test-update"), func() {
+		It("all applied resources should receive new chart version, resources with new names should replace the ones with old names", func() {
+			updateManifestsNum := 3
+			err := moveOrCopyNFilesFromDirToDir(updateManifestsNum, false, getApplyPath(), getTempPath())
+			Expect(err).To(BeNil())
+
+			oldObjs, err := manifestHandler.CollectObjectsFromDir(getTempPath())
+			Expect(err).To(BeNil())
+			oldUns, err := manifestHandler.ObjectsToUnstructured(oldObjs)
+			Expect(err).To(BeNil())
+
+			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getTempPath()), getToDeleteYamlPath())
+			Expect(err).To(BeNil())
+
+			err = ymlutils.AddSuffixToNameInManifests(getTempPath(), suffix)
+			Expect(err).To(BeNil())
+
+			config.DeploymentName = config.DeploymentName + suffix
+
+			err = moveOrCopyNFilesFromDirToDir(updateManifestsNum, true, getTempPath(), getApplyPath())
 			Expect(err).To(BeNil())
 
 			err = ymlutils.UpdateChartVersion(chartUpdatePathForProcess, newChartVersion)
@@ -137,12 +182,13 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			oldUns, err := manifestHandler.ObjectsToUnstructured(oldObjs)
 			Expect(err).To(BeNil())
 
-			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(getTempPath(), getToDeleteYamlPath())
+			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getTempPath()), getToDeleteYamlPath())
 			Expect(err).To(BeNil())
 
-			err = ymlutils.AddSuffixToNameInManifests(getTempPath(), suffix,
-				sapBtpServiceOperatorConfigMapName, sapBtpServiceOperatorSecretName, config.DeploymentName)
+			err = ymlutils.AddSuffixToNameInManifests(getTempPath(), suffix)
 			Expect(err).To(BeNil())
+
+			config.DeploymentName = config.DeploymentName + suffix
 
 			err = moveOrCopyNFilesFromDirToDir(updateManifestsNum, true, getTempPath(), getApplyPath())
 			Expect(err).To(BeNil())
@@ -167,18 +213,7 @@ var _ = Describe("BTP Operator controller - updating", func() {
 				return actualNumOfNewResources
 			}).WithTimeout(time.Second * 5).WithPolling(time.Millisecond * 100).Should(Equal(initResourcesNum))
 
-			stableNames := map[string]bool{
-				sapBtpServiceOperatorConfigMapName: true,
-				sapBtpServiceOperatorSecretName:    true,
-				config.DeploymentName:              true,
-			}
-			var renamedOldUns []*unstructured.Unstructured
-			for _, u := range oldUns {
-				if !stableNames[u.GetName()] {
-					renamedOldUns = append(renamedOldUns, u)
-				}
-			}
-			assertResourcesRemoval(renamedOldUns...)
+			assertResourcesRemoval(oldUns...)
 		})
 	})
 
@@ -203,7 +238,7 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			expectedUns, err := manifestHandler.ObjectsToUnstructured(expectedApplyObjs)
 			Expect(err).To(BeNil())
 
-			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(getTempPath(), getToDeleteYamlPath())
+			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getTempPath()), getToDeleteYamlPath())
 			Expect(err).To(BeNil())
 
 			err = ymlutils.UpdateChartVersion(chartUpdatePathForProcess, newChartVersion)
