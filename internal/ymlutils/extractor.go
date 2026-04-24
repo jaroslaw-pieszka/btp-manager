@@ -64,28 +64,31 @@ func containsGvk(gvks []schema.GroupVersionKind, gvk schema.GroupVersionKind) bo
 }
 
 // ExtractGvkFromYml parses a multi-document YAML string and returns all GVKs found.
+// It uses line scanning rather than a full YAML parser so that it tolerates
+// Helm template syntax ({{ ... }}) present in chart template files.
 func ExtractGvkFromYml(wholeFile string) ([]schema.GroupVersionKind, error) {
 	var gvks []schema.GroupVersionKind
 	for _, part := range strings.Split(wholeFile, "---\n") {
-		part = strings.TrimSpace(part)
-		if part == "" {
+		if strings.TrimSpace(part) == "" {
 			continue
 		}
-		var meta struct {
-			APIVersion string `yaml:"apiVersion"`
-			Kind       string `yaml:"kind"`
+		var apiVersion, kind string
+		for _, line := range strings.Split(part, "\n") {
+			if strings.HasPrefix(line, "apiVersion:") {
+				apiVersion = strings.TrimSpace(strings.TrimPrefix(line, "apiVersion:"))
+			}
+			if strings.HasPrefix(line, "kind:") {
+				kind = strings.TrimSpace(strings.TrimPrefix(line, "kind:"))
+			}
 		}
-		if err := yaml.Unmarshal([]byte(part), &meta); err != nil {
-			return nil, err
-		}
-		if meta.APIVersion == "" || meta.Kind == "" {
+		if apiVersion == "" || kind == "" {
 			continue
 		}
-		gv, err := schema.ParseGroupVersion(meta.APIVersion)
+		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
 			return nil, err
 		}
-		gvks = append(gvks, gv.WithKind(meta.Kind))
+		gvks = append(gvks, gv.WithKind(kind))
 	}
 	return gvks, nil
 }
@@ -119,7 +122,12 @@ func extractStringValue(data []byte, key string) (string, error) {
 // Production callers: pass os.DirFS(sourceDir).
 // Tests: pass fstest.MapFS.
 func CopyManifestsFromYamlsIntoOneYaml(fsys fs.FS, targetYaml string) error {
-	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+	target, err := os.OpenFile(targetYaml, os.O_RDWR|os.O_APPEND, 0666)
+	if err != nil {
+		return err
+	}
+
+	walkErr := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -138,12 +146,13 @@ func CopyManifestsFromYamlsIntoOneYaml(fsys fs.FS, targetYaml string) error {
 		if err != nil {
 			return err
 		}
-		target, err := os.OpenFile(targetYaml, os.O_RDWR|os.O_APPEND, 0666)
-		if err != nil {
-			return err
-		}
-		defer target.Close()
 		_, err = target.Write(data)
 		return err
 	})
+
+	closeErr := target.Close()
+	if walkErr != nil {
+		return walkErr
+	}
+	return closeErr
 }
