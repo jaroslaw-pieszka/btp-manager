@@ -713,22 +713,20 @@ func (r *BtpOperatorReconciler) deleteCreationTimestamp(us ...*unstructured.Unst
 }
 
 func (r *BtpOperatorReconciler) setConfigMapValues(secret *corev1.Secret, u *unstructured.Unstructured) error {
-	if err := unstructured.SetNestedField(u.Object, string(secret.Data[ClusterIdSecretKey]), "data", ClusterIdConfigMapKey); err != nil {
-		return err
+	entries := []struct {
+		key string
+		val any
+	}{
+		{ClusterIdConfigMapKey, string(secret.Data[ClusterIdSecretKey])},
+		{ReleaseNamespaceConfigMapKey, r.credentialsNamespaceFromSapBtpManagerSecret},
+		{ManagementNamespaceConfigMapKey, r.credentialsNamespaceFromSapBtpManagerSecret},
+		{EnableLimitedCacheConfigMapKey, config.EnableLimitedCache},
 	}
-
-	if err := unstructured.SetNestedField(u.Object, r.credentialsNamespaceFromSapBtpManagerSecret, "data", ReleaseNamespaceConfigMapKey); err != nil {
-		return err
+	for _, e := range entries {
+		if err := unstructured.SetNestedField(u.Object, e.val, "data", e.key); err != nil {
+			return err
+		}
 	}
-
-	if err := unstructured.SetNestedField(u.Object, r.credentialsNamespaceFromSapBtpManagerSecret, "data", ManagementNamespaceConfigMapKey); err != nil {
-		return err
-	}
-
-	if err := unstructured.SetNestedField(u.Object, config.EnableLimitedCache, "data", EnableLimitedCacheConfigMapKey); err != nil {
-		return err
-	}
-
 	return nil
 }
 
