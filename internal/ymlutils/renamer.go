@@ -1,6 +1,8 @@
 package ymlutils
 
 import (
+	"bytes"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -32,29 +34,76 @@ func AddSuffixToNameInManifests(manifestsDir, suffix string) error {
 	})
 }
 
+// addSuffixToNameInContent processes a potentially multi-document YAML byte slice,
+// appending suffix to metadata.name and spec.group in every document.
 func addSuffixToNameInContent(data []byte, suffix string) ([]byte, error) {
-	var obj map[string]interface{}
-	if err := yaml.Unmarshal(data, &obj); err != nil {
-		return nil, err
-	}
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(4)
 
-	if metadata, ok := obj["metadata"].(map[string]interface{}); ok {
-		if name, ok := metadata["name"].(string); ok {
-			metadata["name"] = name + suffix
+	for {
+		var node yaml.Node
+		err := dec.Decode(&node)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		// A document node wraps the actual content node.
+		// node.Kind == yaml.DocumentNode, node.Content[0] is the root.
+		if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
+			applyNameSuffix(node.Content[0], suffix)
+		}
+
+		if err := enc.Encode(&node); err != nil {
+			return nil, err
 		}
 	}
 
-	if spec, ok := obj["spec"].(map[string]interface{}); ok {
-		if group, ok := spec["group"].(string); ok {
-			spec["group"] = group + suffix
-		}
-	}
-
-	out, err := yaml.Marshal(obj)
-	if err != nil {
+	if err := enc.Close(); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return buf.Bytes(), nil
+}
+
+// applyNameSuffix mutates a yaml.Node tree to append suffix to metadata.name and spec.group.
+func applyNameSuffix(node *yaml.Node, suffix string) {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return
+	}
+	var metadataNode, specNode *yaml.Node
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		key := node.Content[i]
+		val := node.Content[i+1]
+		switch key.Value {
+		case "metadata":
+			metadataNode = val
+		case "spec":
+			specNode = val
+		}
+	}
+	if metadataNode != nil {
+		appendToMappingStringField(metadataNode, "name", suffix)
+	}
+	if specNode != nil {
+		appendToMappingStringField(specNode, "group", suffix)
+	}
+}
+
+// appendToMappingStringField finds key in a MappingNode and appends suffix to its string value.
+func appendToMappingStringField(node *yaml.Node, key, suffix string) {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key && node.Content[i+1].Kind == yaml.ScalarNode {
+			node.Content[i+1].Value += suffix
+			return
+		}
+	}
 }
 
 // UpdateChartVersion sets the version field in Chart.yaml at chartPath/Chart.yaml.

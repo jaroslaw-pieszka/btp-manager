@@ -131,11 +131,6 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			err := moveOrCopyNFilesFromDirToDir(updateManifestsNum, false, getApplyPath(), getTempPath())
 			Expect(err).To(BeNil())
 
-			oldObjs, err := manifestHandler.CollectObjectsFromDir(getTempPath())
-			Expect(err).To(BeNil())
-			oldUns, err := manifestHandler.ObjectsToUnstructured(oldObjs)
-			Expect(err).To(BeNil())
-
 			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getTempPath()), getToDeleteYamlPath())
 			Expect(err).To(BeNil())
 
