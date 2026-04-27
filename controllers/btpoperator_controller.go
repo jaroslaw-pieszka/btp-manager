@@ -720,22 +720,20 @@ func (r *BtpOperatorReconciler) deleteCreationTimestamp(us ...*unstructured.Unst
 }
 
 func (r *BtpOperatorReconciler) setConfigMapValues(secret *corev1.Secret, u *unstructured.Unstructured) error {
-	if err := unstructured.SetNestedField(u.Object, string(secret.Data[ClusterIdSecretKey]), "data", ClusterIdConfigMapKey); err != nil {
-		return err
+	entries := []struct {
+		key string
+		val any
+	}{
+		{ClusterIdConfigMapKey, string(secret.Data[ClusterIdSecretKey])},
+		{ReleaseNamespaceConfigMapKey, r.credentialsNamespaceFromSapBtpManagerSecret},
+		{ManagementNamespaceConfigMapKey, r.credentialsNamespaceFromSapBtpManagerSecret},
+		{EnableLimitedCacheConfigMapKey, config.EnableLimitedCache},
 	}
-
-	if err := unstructured.SetNestedField(u.Object, r.credentialsNamespaceFromSapBtpManagerSecret, "data", ReleaseNamespaceConfigMapKey); err != nil {
-		return err
+	for _, e := range entries {
+		if err := unstructured.SetNestedField(u.Object, e.val, "data", e.key); err != nil {
+			return err
+		}
 	}
-
-	if err := unstructured.SetNestedField(u.Object, r.credentialsNamespaceFromSapBtpManagerSecret, "data", ManagementNamespaceConfigMapKey); err != nil {
-		return err
-	}
-
-	if err := unstructured.SetNestedField(u.Object, config.EnableLimitedCache, "data", EnableLimitedCacheConfigMapKey); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -1574,39 +1572,36 @@ func (r *BtpOperatorReconciler) watchSecretPredicates() predicate.TypedPredicate
 	}
 }
 
+func deploymentConditionStatuses(d *appsv1.Deployment) (available, progressing string) {
+	for _, c := range d.Status.Conditions {
+		switch string(c.Type) {
+		case deploymentAvailableConditionType:
+			available = string(c.Status)
+		case deploymentProgressingConditionType:
+			progressing = string(c.Status)
+		}
+	}
+	return
+}
+
 func (r *BtpOperatorReconciler) watchDeploymentPredicates() predicate.Funcs {
+	isManagedDeployment := func(obj client.Object) bool {
+		return obj.GetName() == config.DeploymentName && obj.GetNamespace() == config.ChartNamespace
+	}
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			obj := e.Object.(*appsv1.Deployment)
-			return obj.Name == config.DeploymentName && obj.Namespace == config.ChartNamespace
+			return isManagedDeployment(e.Object)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			obj := e.Object.(*appsv1.Deployment)
-			return obj.Name == config.DeploymentName && obj.Namespace == config.ChartNamespace
+			return isManagedDeployment(e.Object)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			newObj := e.ObjectNew.(*appsv1.Deployment)
-			oldObj := e.ObjectOld.(*appsv1.Deployment)
-			if !(newObj.Name == config.DeploymentName && newObj.Namespace == config.ChartNamespace) {
+			if !isManagedDeployment(e.ObjectNew) {
 				return false
 			}
-			var newAvailableConditionStatus, newProgressingConditionStatus string
-			for _, condition := range newObj.Status.Conditions {
-				if string(condition.Type) == deploymentProgressingConditionType {
-					newProgressingConditionStatus = string(condition.Status)
-				} else if string(condition.Type) == deploymentAvailableConditionType {
-					newAvailableConditionStatus = string(condition.Status)
-				}
-			}
-			var oldAvailableConditionStatus, oldProgressingConditionStatus string
-			for _, condition := range oldObj.Status.Conditions {
-				if string(condition.Type) == deploymentProgressingConditionType {
-					oldProgressingConditionStatus = string(condition.Status)
-				} else if string(condition.Type) == deploymentAvailableConditionType {
-					oldAvailableConditionStatus = string(condition.Status)
-				}
-			}
-			return newAvailableConditionStatus != oldAvailableConditionStatus || newProgressingConditionStatus != oldProgressingConditionStatus
+			newAvail, newProg := deploymentConditionStatuses(e.ObjectNew.(*appsv1.Deployment))
+			oldAvail, oldProg := deploymentConditionStatuses(e.ObjectOld.(*appsv1.Deployment))
+			return newAvail != oldAvail || newProg != oldProg
 		},
 	}
 }
