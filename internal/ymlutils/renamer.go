@@ -12,8 +12,13 @@ import (
 )
 
 // AddSuffixToNameInManifests walks dir and appends suffix to metadata.name and spec.group
-// in every .yml file. Delegates per-file work to addSuffixToNameInContent.
-func AddSuffixToNameInManifests(manifestsDir, suffix string) error {
+// in every .yml file, skipping names listed in excludeNames.
+// Delegates per-file work to addSuffixToNameInContent.
+func AddSuffixToNameInManifests(manifestsDir, suffix string, excludeNames ...string) error {
+	excluded := make(map[string]bool, len(excludeNames))
+	for _, n := range excludeNames {
+		excluded[n] = true
+	}
 	return fs.WalkDir(os.DirFS(manifestsDir), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -26,7 +31,7 @@ func AddSuffixToNameInManifests(manifestsDir, suffix string) error {
 		if err != nil {
 			return err
 		}
-		updated, err := addSuffixToNameInContent(data, suffix)
+		updated, err := addSuffixToNameInContent(data, suffix, excluded)
 		if err != nil {
 			return err
 		}
@@ -35,8 +40,9 @@ func AddSuffixToNameInManifests(manifestsDir, suffix string) error {
 }
 
 // addSuffixToNameInContent processes a potentially multi-document YAML byte slice,
-// appending suffix to metadata.name and spec.group in every document.
-func addSuffixToNameInContent(data []byte, suffix string) ([]byte, error) {
+// appending suffix to metadata.name and spec.group in every document,
+// skipping documents whose metadata.name is in excluded.
+func addSuffixToNameInContent(data []byte, suffix string, excluded map[string]bool) ([]byte, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
@@ -55,7 +61,7 @@ func addSuffixToNameInContent(data []byte, suffix string) ([]byte, error) {
 		// A document node wraps the actual content node.
 		// node.Kind == yaml.DocumentNode, node.Content[0] is the root.
 		if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
-			applyNameSuffix(node.Content[0], suffix)
+			applyNameSuffix(node.Content[0], suffix, excluded)
 		}
 
 		if err := enc.Encode(&node); err != nil {
@@ -69,8 +75,9 @@ func addSuffixToNameInContent(data []byte, suffix string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// applyNameSuffix mutates a yaml.Node tree to append suffix to metadata.name and spec.group.
-func applyNameSuffix(node *yaml.Node, suffix string) {
+// applyNameSuffix mutates a yaml.Node tree to append suffix to metadata.name and spec.group,
+// skipping documents whose metadata.name is in excluded.
+func applyNameSuffix(node *yaml.Node, suffix string, excluded map[string]bool) {
 	if node == nil || node.Kind != yaml.MappingNode {
 		return
 	}
@@ -86,6 +93,9 @@ func applyNameSuffix(node *yaml.Node, suffix string) {
 		}
 	}
 	if metadataNode != nil {
+		if excluded[getStringField(metadataNode, "name")] {
+			return
+		}
 		appendToMappingStringField(metadataNode, "name", suffix)
 	}
 	if specNode != nil {
@@ -104,6 +114,19 @@ func appendToMappingStringField(node *yaml.Node, key, suffix string) {
 			return
 		}
 	}
+}
+
+// getStringField returns the string value of key in a MappingNode, or "" if not found.
+func getStringField(node *yaml.Node, key string) string {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return ""
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key && node.Content[i+1].Kind == yaml.ScalarNode {
+			return node.Content[i+1].Value
+		}
+	}
+	return ""
 }
 
 // UpdateChartVersion sets the version field in Chart.yaml at chartPath/Chart.yaml.

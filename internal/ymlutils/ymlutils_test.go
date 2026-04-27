@@ -179,7 +179,7 @@ func TestUpdateChartVersionInContent(t *testing.T) {
 
 func TestAddSuffixToNameInContent_MetadataName(t *testing.T) {
 	data := []byte("apiVersion: v1\nkind: ServiceAccount\nmetadata:\n  name: btp-operator\n  namespace: kyma-system\n")
-	out, err := addSuffixToNameInContent(data, "-updated")
+	out, err := addSuffixToNameInContent(data, "-updated", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestAddSuffixToNameInContent_MetadataName(t *testing.T) {
 
 func TestAddSuffixToNameInContent_SpecGroup(t *testing.T) {
 	data := []byte("apiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: servicebindings.services.cloud.sap.com\nspec:\n  group: services.cloud.sap.com\n")
-	out, err := addSuffixToNameInContent(data, "-updated")
+	out, err := addSuffixToNameInContent(data, "-updated", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestAddSuffixToNameInContent_SpecGroup(t *testing.T) {
 
 func TestAddSuffixToNameInContent_NoSpecGroup(t *testing.T) {
 	data := []byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: my-config\n")
-	out, err := addSuffixToNameInContent(data, "-updated")
+	out, err := addSuffixToNameInContent(data, "-updated", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

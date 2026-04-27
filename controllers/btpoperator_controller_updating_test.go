@@ -98,10 +98,9 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			err := ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getApplyPath()), getToDeleteYamlPath())
 			Expect(err).To(BeNil())
 
-			err = ymlutils.AddSuffixToNameInManifests(getApplyPath(), suffix)
+			err = ymlutils.AddSuffixToNameInManifests(getApplyPath(), suffix,
+				sapBtpServiceOperatorConfigMapName, sapBtpServiceOperatorSecretName, config.DeploymentName)
 			Expect(err).To(BeNil())
-
-			config.DeploymentName = config.DeploymentName + suffix
 
 			err = ymlutils.UpdateChartVersion(chartUpdatePathForProcess, newChartVersion)
 			Expect(err).To(BeNil())
@@ -134,10 +133,9 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getTempPath()), getToDeleteYamlPath())
 			Expect(err).To(BeNil())
 
-			err = ymlutils.AddSuffixToNameInManifests(getTempPath(), suffix)
+			err = ymlutils.AddSuffixToNameInManifests(getTempPath(), suffix,
+				sapBtpServiceOperatorConfigMapName, sapBtpServiceOperatorSecretName, config.DeploymentName)
 			Expect(err).To(BeNil())
-
-			config.DeploymentName = config.DeploymentName + suffix
 
 			err = moveOrCopyNFilesFromDirToDir(updateManifestsNum, true, getTempPath(), getApplyPath())
 			Expect(err).To(BeNil())
@@ -180,10 +178,9 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getTempPath()), getToDeleteYamlPath())
 			Expect(err).To(BeNil())
 
-			err = ymlutils.AddSuffixToNameInManifests(getTempPath(), suffix)
+			err = ymlutils.AddSuffixToNameInManifests(getTempPath(), suffix,
+				sapBtpServiceOperatorConfigMapName, sapBtpServiceOperatorSecretName, config.DeploymentName)
 			Expect(err).To(BeNil())
-
-			config.DeploymentName = config.DeploymentName + suffix
 
 			err = moveOrCopyNFilesFromDirToDir(updateManifestsNum, true, getTempPath(), getApplyPath())
 			Expect(err).To(BeNil())
