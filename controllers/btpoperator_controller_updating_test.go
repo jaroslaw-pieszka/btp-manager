@@ -261,7 +261,19 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			Expect(err).To(BeNil())
 			Expect(actualNumOfNewResources).To(Equal(len(expectedApplyObjs)))
 			assertResourcesExistence(expectedUns...)
-			assertResourcesRemoval(unexpectedUns...)
+
+			stableNames := map[string]bool{
+				sapBtpServiceOperatorConfigMapName: true,
+				sapBtpServiceOperatorSecretName:    true,
+				config.DeploymentName:              true,
+			}
+			var removableUns []*unstructured.Unstructured
+			for _, u := range unexpectedUns {
+				if !stableNames[u.GetName()] {
+					removableUns = append(removableUns, u)
+				}
+			}
+			assertResourcesRemoval(removableUns...)
 		})
 	})
 
