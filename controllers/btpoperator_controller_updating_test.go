@@ -23,12 +23,12 @@ import (
 )
 
 const (
-	suffix                    = "-updated"
-	newChartVersion           = "9.9.9"
-	updateManifestsNum        = 3
-	remainingAfterRemovalNum  = 4
-	workqueueTimeout          = time.Second * 5
-	workqueuePollingInterval  = time.Millisecond * 100
+	suffix                   = "-updated"
+	newChartVersion          = "9.9.9"
+	updateManifestsNum       = 3
+	remainingAfterRemovalNum = 4
+	workqueueTimeout         = time.Second * 5
+	workqueuePollingInterval = time.Millisecond * 100
 )
 
 var _ = Describe("BTP Operator controller - updating", func() {
