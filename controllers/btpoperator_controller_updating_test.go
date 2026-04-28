@@ -167,18 +167,7 @@ var _ = Describe("BTP Operator controller - updating", func() {
 				return actualNumOfNewResources
 			}).WithTimeout(time.Second * 5).WithPolling(time.Millisecond * 100).Should(Equal(initResourcesNum))
 
-			stableNames := map[string]bool{
-				sapBtpServiceOperatorConfigMapName: true,
-				sapBtpServiceOperatorSecretName:    true,
-				config.DeploymentName:              true,
-			}
-			var renamedOldUns []*unstructured.Unstructured
-			for _, u := range oldUns {
-				if !stableNames[u.GetName()] {
-					renamedOldUns = append(renamedOldUns, u)
-				}
-			}
-			assertResourcesRemoval(renamedOldUns...)
+			assertResourcesRemoval(oldUns...)
 		})
 	})
 
@@ -189,7 +178,7 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			err = moveOrCopyNFilesFromDirToDir(len(allManifests), true, getApplyPath(), getTempPath())
 			Expect(err).To(BeNil())
 
-			remainingManifestsNum := 5
+			remainingManifestsNum := 4
 			err = moveOrCopyNFilesFromDirToDir(remainingManifestsNum, true, getTempPath(), getApplyPath())
 			Expect(err).To(BeNil())
 
@@ -223,19 +212,7 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			Expect(err).To(BeNil())
 			Expect(actualNumOfNewResources).To(Equal(len(expectedApplyObjs)))
 			assertResourcesExistence(expectedUns...)
-
-			stableNames := map[string]bool{
-				sapBtpServiceOperatorConfigMapName: true,
-				sapBtpServiceOperatorSecretName:    true,
-				config.DeploymentName:              true,
-			}
-			var removableUns []*unstructured.Unstructured
-			for _, u := range unexpectedUns {
-				if !stableNames[u.GetName()] {
-					removableUns = append(removableUns, u)
-				}
-			}
-			assertResourcesRemoval(removableUns...)
+			assertResourcesRemoval(unexpectedUns...)
 		})
 	})
 

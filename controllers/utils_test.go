@@ -257,6 +257,11 @@ func assertResourcesRemoval(uns ...*unstructured.Unstructured) {
 }
 
 func moveOrCopyNFilesFromDirToDir(filesNum int, deleteFiles bool, srcDir, targetDir string) error {
+	stableFiles := map[string]bool{
+		"configmap.yml":  true,
+		"deployment.yml": true,
+		"secret.yml":     true,
+	}
 	if err := os.Mkdir(targetDir, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -264,9 +269,13 @@ func moveOrCopyNFilesFromDirToDir(filesNum int, deleteFiles bool, srcDir, target
 	if err != nil {
 		return err
 	}
-	for i, f := range files {
-		if i >= filesNum {
+	copied := 0
+	for _, f := range files {
+		if copied >= filesNum {
 			break
+		}
+		if stableFiles[f.Name()] {
+			continue
 		}
 		input, err := os.ReadFile(fmt.Sprintf("%s%c%s", srcDir, os.PathSeparator, f.Name()))
 		if err != nil {
@@ -280,6 +289,7 @@ func moveOrCopyNFilesFromDirToDir(filesNum int, deleteFiles bool, srcDir, target
 				return err
 			}
 		}
+		copied++
 	}
 
 	return nil
