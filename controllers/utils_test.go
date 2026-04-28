@@ -271,11 +271,11 @@ func moveOrCopyNFilesFromDirToDir(filesNum int, deleteFiles bool, srcDir, target
 	}
 	copied := 0
 	for _, f := range files {
-		if copied >= filesNum {
-			break
-		}
 		if stableFiles[f.Name()] {
 			continue
+		}
+		if copied >= filesNum {
+			break
 		}
 		input, err := os.ReadFile(fmt.Sprintf("%s%c%s", srcDir, os.PathSeparator, f.Name()))
 		if err != nil {
