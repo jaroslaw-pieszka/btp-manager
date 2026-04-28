@@ -227,7 +227,7 @@ var _ = Describe("BTP Operator controller - updating", func() {
 			err = moveOrCopyNFilesFromDirToDir(len(allManifests), true, getApplyPath(), getTempPath())
 			Expect(err).To(BeNil())
 
-			remainingManifestsNum := 4
+			remainingManifestsNum := 5
 			err = moveOrCopyNFilesFromDirToDir(remainingManifestsNum, true, getTempPath(), getApplyPath())
 			Expect(err).To(BeNil())
 
