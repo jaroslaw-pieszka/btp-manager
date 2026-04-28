@@ -126,44 +126,6 @@ var _ = Describe("BTP Operator controller - updating", func() {
 
 	When("update some resources names and bump chart version", Label("test-update"), func() {
 		It("all applied resources should receive new chart version, resources with new names should replace the ones with old names", func() {
-			updateManifestsNum := 3
-			err := moveOrCopyNFilesFromDirToDir(updateManifestsNum, false, getApplyPath(), getTempPath())
-			Expect(err).To(BeNil())
-
-			err = ymlutils.CopyManifestsFromYamlsIntoOneYaml(os.DirFS(getTempPath()), getToDeleteYamlPath())
-			Expect(err).To(BeNil())
-
-			err = ymlutils.AddSuffixToNameInManifests(getTempPath(), suffix,
-				sapBtpServiceOperatorConfigMapName, sapBtpServiceOperatorSecretName, config.DeploymentName)
-			Expect(err).To(BeNil())
-
-			err = moveOrCopyNFilesFromDirToDir(updateManifestsNum, true, getTempPath(), getApplyPath())
-			Expect(err).To(BeNil())
-
-			err = ymlutils.UpdateChartVersion(chartUpdatePathForProcess, newChartVersion)
-			Expect(err).To(BeNil())
-
-			_, err = reconciler.Reconcile(ctx, controllerruntime.Request{NamespacedName: apimachienerytypes.NamespacedName{
-				Namespace: cr.Namespace,
-				Name:      cr.Name,
-			}})
-			Expect(err).To(BeNil())
-
-			Eventually(func() int {
-				actualNumOfOldResources, err := countResourcesForGivenChartVer(gvks, initChartVersion)
-				Expect(err).To(BeNil())
-				return actualNumOfOldResources
-			}).WithTimeout(time.Second * 5).WithPolling(time.Millisecond * 100).Should(Equal(0))
-			Eventually(func() int {
-				actualNumOfNewResources, err := countResourcesForGivenChartVer(gvks, newChartVersion)
-				Expect(err).To(BeNil())
-				return actualNumOfNewResources
-			}).WithTimeout(time.Second * 5).WithPolling(time.Millisecond * 100).Should(Equal(initResourcesNum))
-		})
-	})
-
-	When("update some resources names and bump chart version", Label("test-update"), func() {
-		It("all applied resources should receive new chart version, resources with new names should replace the ones with old names", func() {
 			Eventually(actualWorkqueueSize).WithTimeout(time.Second * 5).WithPolling(time.Millisecond * 100).Should(Equal(0))
 
 			updateManifestsNum := 3
