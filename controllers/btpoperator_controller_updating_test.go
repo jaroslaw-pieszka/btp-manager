@@ -83,6 +83,7 @@ var _ = Describe("BTP Operator controller - updating", func() {
 		Expect(k8sClient.Delete(ctx, cr)).Should(Succeed())
 		Eventually(updateCh).Should(Receive(matchDeleted()))
 		Expect(isCrNotFound()).To(BeTrue())
+		Eventually(actualWorkqueueSize).WithTimeout(workqueueTimeout).WithPolling(workqueuePollingInterval).Should(Equal(0))
 
 		deleteSecret := &corev1.Secret{}
 		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: kymaNamespace, Name: config.SecretName}, deleteSecret)).To(Succeed())
